@@ -211,7 +211,7 @@ export default function AddressAutocomplete({
         <ul
           id="address-suggestions"
           role="listbox"
-          className="absolute top-full left-0 right-0 z-20 mt-1 bg-[var(--bf-color-bg)] border border-[var(--bf-color-border)] rounded-[var(--bf-radius)] shadow-lg overflow-hidden origin-top bf-animate-dropdown-enter"
+          className="absolute top-full left-0 right-0 z-50 mt-1 max-h-[min(320px,45vh)] bg-[var(--bf-color-bg)] border border-[var(--bf-color-border)] rounded-[var(--bf-radius)] shadow-lg overflow-y-auto origin-top bf-animate-dropdown-enter"
         >
           {suggestions.map((suggestion, index) => (
             <li

@@ -156,7 +156,7 @@ export default function BloomForm({ config, stickyFooter = false, onSuccess }: B
   const isDateStep = currentStepConfig?.type === "date";
 
   return (
-    <div className="bg-[var(--bf-color-bg)] rounded-[var(--bf-radius-card)] border border-[var(--bf-color-border)] w-full overflow-hidden" style={{ fontFamily: 'var(--bf-font-body)' }}>
+    <div className="relative bg-[var(--bf-color-bg)] rounded-[var(--bf-radius-card)] border border-[var(--bf-color-border)] w-full overflow-visible" style={{ fontFamily: 'var(--bf-font-body)' }}>
       {/* Header Section - Gray background */}
       <div className="bg-[var(--bf-color-bg-header)] border-b border-[var(--bf-color-border)] px-6 pt-5 pb-4 rounded-t-[11px]">
         <h2 className="font-bold text-[32px] leading-[1.2] text-black uppercase tracking-tight" style={{ fontFamily: 'var(--bf-font-heading)' }}>
