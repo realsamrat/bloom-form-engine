@@ -95,6 +95,35 @@ Address autocomplete uses Bloom's public places endpoint by default, so generate
 
 Generated forms use the package's standard theme by default. Import the base stylesheet, then override CSS variables to match your brand.
 
+## What You Get
+
+When you import a Bloom URL, the starter is intentionally ready-made:
+
+- A mapped React form component with Bloom `accountId`, `formId`, question IDs, field types, options, required flags, and success copy.
+- A centered Next.js page route such as `app/get-quote/page.tsx`.
+- The Perfect Booth-style base theme using Inter by default, with question titles shown in normal case rather than forced all-caps.
+- Address autocomplete through Bloom's places endpoint.
+- Optional local proxy generation at `app/api/bloom/[...path]/route.ts` when you pass `--proxy "/api/bloom"`.
+
+For most Next.js + Tailwind projects, the generated files are enough. Make sure your global CSS includes Tailwind and your Tailwind content config scans the package output:
+
+```js
+// tailwind.config.js
+export default {
+  content: [
+    "./app/**/*.{js,ts,jsx,tsx,mdx}",
+    "./components/**/*.{js,ts,jsx,tsx,mdx}",
+    "./node_modules/bloom-form-engine/dist/**/*.{js,jsx}",
+  ],
+  theme: {
+    extend: {},
+  },
+  plugins: [],
+};
+```
+
+If your app does not use Tailwind, keep the generated component and page as the wiring layer, then replace the class names with your own styles while keeping the generated `BloomFormConfig`.
+
 ## Manual Usage
 
 ```tsx
@@ -179,6 +208,22 @@ The default starter theme mirrors the Perfect Booth form treatment while using I
 | `config` | `BloomFormConfig` | required | Form configuration |
 | `stickyFooter` | `boolean` | `false` | Pin footer buttons to bottom of viewport |
 | `onSuccess` | `() => void` | - | Callback when form submits successfully |
+
+## Local Proxy Route
+
+Use a proxy when your form runs on localhost or on a domain Bloom does not accept directly:
+
+```bash
+npx bloom-form-engine import "https://your-account.bloom.io/your-form" --proxy "/api/bloom"
+```
+
+The generated route forwards requests to `https://api.bloom.io/api`, preserves only the headers Bloom needs, strips localhost `Origin` and `Referer`, supports `GET`, `POST`, and `OPTIONS`, and adds browser-friendly CORS headers.
+
+For production, deploy the same route with your app and keep `proxyBaseUrl: "/api/bloom"` in the generated config. You can also use a full deployed URL:
+
+```tsx
+proxyBaseUrl: 'https://your-domain.com/api/bloom'
+```
 
 ## Peer Dependencies
 

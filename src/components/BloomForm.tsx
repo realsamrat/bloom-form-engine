@@ -159,7 +159,7 @@ export default function BloomForm({ config, stickyFooter = false, onSuccess }: B
     <div className="relative bg-[var(--bf-color-bg)] rounded-[var(--bf-radius-card)] border border-[var(--bf-color-border)] w-full overflow-visible" style={{ fontFamily: 'var(--bf-font-body)' }}>
       {/* Header Section - Gray background */}
       <div className="bg-[var(--bf-color-bg-header)] border-b border-[var(--bf-color-border)] px-6 pt-5 pb-4 rounded-t-[11px]">
-        <h2 className="font-bold text-[32px] leading-[1.2] text-black uppercase tracking-tight" style={{ fontFamily: 'var(--bf-font-heading)' }}>
+        <h2 className="font-bold text-[32px] leading-[1.2] text-black tracking-tight" style={{ fontFamily: 'var(--bf-font-heading)' }}>
           {currentStepConfig?.title || ""}
         </h2>
         <p className="text-sm text-black tracking-[0.14px] mt-2">
@@ -223,7 +223,7 @@ export default function BloomForm({ config, stickyFooter = false, onSuccess }: B
       </div>
 
       {/* Footer Section - Buttons with top border */}
-      <div className={`border-t border-[var(--bf-color-border)] px-[24px] pt-[16px] pb-[16px] bg-[var(--bf-color-bg)] ${stickyFooter ? "fixed bottom-0 left-0 right-0 z-[110]" : ""}`}>
+      <div className={`border-t border-[var(--bf-color-border)] px-[24px] pt-[16px] pb-[16px] bg-[var(--bf-color-bg)] ${stickyFooter ? "fixed bottom-0 left-0 right-0 z-[110]" : "rounded-b-[11px]"}`}>
         <div className="flex items-center justify-between">
           {/* Left side - close instruction when overlay is open */}
           <div className="flex-1">
