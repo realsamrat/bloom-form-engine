@@ -3,8 +3,20 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 
 interface Prediction {
-  description: string;
-  place_id: string;
+  description?: string;
+  place_id?: string;
+  placeId?: string;
+  text?: {
+    text?: string;
+  };
+  structuredFormat?: {
+    mainText?: {
+      text?: string;
+    };
+    secondaryText?: {
+      text?: string;
+    };
+  };
 }
 
 interface AddressAutocompleteProps {
@@ -13,7 +25,7 @@ interface AddressAutocompleteProps {
   onChange: (value: string) => void;
   placeholder?: string;
   error?: string;
-  /** API endpoint for Google Places autocomplete. Configurable per project. */
+  /** API endpoint for places autocomplete. Configurable per project. */
   endpoint?: string;
 }
 
@@ -23,7 +35,7 @@ export default function AddressAutocomplete({
   onChange,
   placeholder = "Start typing your address...",
   error,
-  endpoint = "/api/google/places/autocomplete",
+  endpoint = "https://app.bloom.io/api/google/places/autocomplete",
 }: AddressAutocompleteProps) {
   const [suggestions, setSuggestions] = useState<Prediction[]>([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -43,9 +55,16 @@ export default function AddressAutocomplete({
 
     setIsLoading(true);
     try {
-      const response = await fetch(
-        `${endpoint}?input=${encodeURIComponent(input)}`
-      );
+      const response = await fetch(`${endpoint}?input=${encodeURIComponent(input)}`);
+      if (!response.ok) {
+        throw new Error(`Places request failed: ${response.status}`);
+      }
+
+      const contentType = response.headers.get("content-type") || "";
+      if (!contentType.includes("application/json")) {
+        throw new Error("Places endpoint did not return JSON");
+      }
+
       const data = await response.json();
 
       if (data.predictions && Array.isArray(data.predictions)) {
@@ -80,7 +99,7 @@ export default function AddressAutocomplete({
 
   // Handle suggestion selection
   const handleSelect = useCallback((suggestion: Prediction) => {
-    onChange(suggestion.description);
+    onChange(getPredictionLabel(suggestion));
     setSuggestions([]);
     setIsOpen(false);
     setHighlightedIndex(-1);
@@ -196,7 +215,7 @@ export default function AddressAutocomplete({
         >
           {suggestions.map((suggestion, index) => (
             <li
-              key={suggestion.place_id}
+              key={suggestion.place_id || suggestion.placeId || getPredictionLabel(suggestion)}
               role="option"
               aria-selected={highlightedIndex === index}
               onClick={() => handleSelect(suggestion)}
@@ -207,7 +226,7 @@ export default function AddressAutocomplete({
                 ${highlightedIndex === index ? "bg-gray-100" : "hover:bg-gray-50"}
               `}
             >
-              {suggestion.description}
+              {getPredictionLabel(suggestion)}
             </li>
           ))}
         </ul>
@@ -217,5 +236,17 @@ export default function AddressAutocomplete({
         <p className="mt-1.5 text-sm text-[var(--bf-color-error)]">{error}</p>
       )}
     </div>
+  );
+}
+
+function getPredictionLabel(prediction: Prediction): string {
+  return (
+    prediction.description ||
+    prediction.text?.text ||
+    [
+      prediction.structuredFormat?.mainText?.text,
+      prediction.structuredFormat?.secondaryText?.text,
+    ].filter(Boolean).join(", ") ||
+    ""
   );
 }

@@ -142,3 +142,75 @@ export default function ${componentName}Page() {
 }
 `;
 }
+
+export function generateBloomProxyRoute(): string {
+  return `import { NextRequest, NextResponse } from 'next/server';
+
+const BLOOM_BASE_URL = 'https://api.bloom.io/api';
+
+type RouteContext = {
+  params: Promise<{
+    path: string[];
+  }>;
+};
+
+function fetchWithTimeout(url: string, options: RequestInit, ms = 10000): Promise<Response> {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), ms);
+  return fetch(url, { ...options, signal: controller.signal }).finally(() => clearTimeout(id));
+}
+
+async function proxyBloom(request: NextRequest, context: RouteContext) {
+  const { path } = await context.params;
+  const target = new URL(\`\${BLOOM_BASE_URL}/\${path.join('/')}\`);
+  target.search = request.nextUrl.search;
+
+  const headers = new Headers();
+  const contentType = request.headers.get('content-type');
+  const account = request.headers.get('x-account');
+
+  headers.set('accept', request.headers.get('accept') || 'application/vnd.bloom.v3');
+  if (contentType) headers.set('content-type', contentType);
+  if (account) headers.set('x-account', account);
+
+  const response = await fetchWithTimeout(target.toString(), {
+    method: request.method,
+    headers,
+    body: request.method === 'GET' || request.method === 'HEAD' ? undefined : await request.text(),
+    cache: 'no-store',
+  });
+
+  const responseHeaders = new Headers(response.headers);
+  setCorsHeaders(responseHeaders);
+  responseHeaders.delete('content-encoding');
+  responseHeaders.delete('content-length');
+  responseHeaders.delete('transfer-encoding');
+
+  return new NextResponse(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: responseHeaders,
+  });
+}
+
+export async function GET(request: NextRequest, context: RouteContext) {
+  return proxyBloom(request, context);
+}
+
+export async function POST(request: NextRequest, context: RouteContext) {
+  return proxyBloom(request, context);
+}
+
+export async function OPTIONS() {
+  const headers = new Headers();
+  setCorsHeaders(headers);
+  return new NextResponse(null, { status: 204, headers });
+}
+
+function setCorsHeaders(headers: Headers) {
+  headers.set('access-control-allow-origin', '*');
+  headers.set('access-control-allow-methods', 'GET,POST,OPTIONS');
+  headers.set('access-control-allow-headers', 'accept,content-type,x-account');
+}
+`;
+}

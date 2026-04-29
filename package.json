@@ -1,6 +1,6 @@
 {
   "name": "bloom-form-engine",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "A themeable, config-driven multi-step form engine for Bloom.io",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

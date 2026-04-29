@@ -2,6 +2,7 @@ import chalk from "chalk";
 import { askConfirm, askText } from "../utils/prompts";
 import { fileExists, readFile, resolveFromRoot, writeFile } from "../utils/fs";
 import {
+  generateBloomProxyRoute,
   generateFormComponent,
   generatePageRoute,
   toCamelCase,
@@ -114,8 +115,9 @@ export async function importCommand(url: string, options: ImportOptions = {}): P
   const proxyBaseUrl = await resolveProxyBaseUrl(options.proxy, options.yes);
   const shouldCreatePage = options.noPage !== true;
   const pageOutputDir = options.pageOutput || `./app/${toKebabCase(componentName.replace(/Form$/, ""), "bloom-form")}`;
+  const proxyRouteOutput = getLocalProxyRouteOutput(proxyBaseUrl);
 
-  printImportSummary(accountId, formId, componentName, steps, proxyBaseUrl, shouldCreatePage ? pageOutputDir : null);
+  printImportSummary(accountId, formId, componentName, steps, proxyBaseUrl, shouldCreatePage ? pageOutputDir : null, proxyRouteOutput);
 
   if (!options.yes) {
     const proceed = await askConfirm("Create this form component?", true);
@@ -145,10 +147,17 @@ export async function importCommand(url: string, options: ImportOptions = {}): P
     writeFile(pagePath, pageContent);
   }
 
+  if (proxyRouteOutput) {
+    writeFile(resolveFromRoot(proxyRouteOutput), generateBloomProxyRoute());
+  }
+
   console.log("");
   console.log(chalk.green(`  ✓ Created ${outputDir}/${componentName}.tsx`));
   if (shouldCreatePage) {
     console.log(chalk.green(`  ✓ Created ${pageOutputDir}/page.tsx`));
+  }
+  if (proxyRouteOutput) {
+    console.log(chalk.green(`  ✓ Created ${proxyRouteOutput}`));
   }
   console.log("");
   console.log(chalk.bold("  Usage:"));
@@ -175,6 +184,15 @@ async function resolveProxyBaseUrl(optionValue: string | undefined, skipPrompt: 
 function toImportPath(relativePath: string): string {
   const normalized = relativePath.split(path.sep).join("/");
   return normalized.startsWith(".") ? normalized : `./${normalized}`;
+}
+
+function getLocalProxyRouteOutput(proxyBaseUrl: string | undefined): string | null {
+  if (!proxyBaseUrl || /^https?:\/\//i.test(proxyBaseUrl)) return null;
+
+  const cleanPath = proxyBaseUrl.replace(/^\/+/, "").replace(/\/+$/, "");
+  if (!cleanPath.startsWith("api/")) return null;
+
+  return `./app/${cleanPath}/[...path]/route.ts`;
 }
 
 function getOutputDir(configContent: string | null): string | null {
@@ -420,7 +438,8 @@ function printImportSummary(
   componentName: string,
   steps: StepConfig[],
   proxyBaseUrl: string | undefined,
-  pageOutputDir: string | null
+  pageOutputDir: string | null,
+  proxyRouteOutput: string | null
 ): void {
   console.log(chalk.gray(`  Account: ${accountId}`));
   console.log(chalk.gray(`  Form:    ${formId}`));
@@ -428,6 +447,9 @@ function printImportSummary(
   console.log(chalk.gray(`  Proxy:   ${proxyBaseUrl || "set up later"}`));
   if (pageOutputDir) {
     console.log(chalk.gray(`  Page:    ${pageOutputDir}/page.tsx`));
+  }
+  if (proxyRouteOutput) {
+    console.log(chalk.gray(`  API:     ${proxyRouteOutput}`));
   }
   console.log("");
   console.log(chalk.bold("  Detected steps:"));

@@ -63,6 +63,14 @@ The CLI creates two starter files:
 
 Bloom may reject browser submissions from `localhost`, so the CLI also asks for an optional proxy/API base URL. Leave it blank to set the proxy up later.
 
+If you pass a local Next.js proxy path, the CLI creates the route for you:
+
+```bash
+npx bloom-form-engine import "<bloom-url>" --proxy "/api/bloom"
+```
+
+That writes `app/api/bloom/[...path]/route.ts`. Browser requests go to your app first, and the route forwards only the Bloom headers that are needed, so localhost `Origin` and `Referer` headers are not sent upstream to Bloom.
+
 You can also pass Bloom's public API URL directly:
 
 ```bash
@@ -83,6 +91,8 @@ To set the submission proxy immediately:
 npx bloom-form-engine import "<bloom-url>" --proxy "https://your-domain.com/api/bloom"
 ```
 
+Address autocomplete uses Bloom's public places endpoint by default, so generated address steps work from localhost without a Google Maps key. You can still override `placesEndpoint` in your `BloomFormConfig` if you want to use your own Google Places route.
+
 Generated forms use the package's standard theme by default. Import the base stylesheet, then override CSS variables to match your brand.
 
 ## Manual Usage
@@ -95,6 +105,7 @@ import 'bloom-form-engine/src/theme.css';
 const config: BloomFormConfig = {
   accountId: 'your-account-id',
   formId: 'your-form-id',
+  proxyBaseUrl: '/api/bloom',
   steps: [
     {
       id: 'name',
@@ -153,7 +164,7 @@ The default starter theme mirrors the Perfect Booth form treatment while using I
 |------|-------------|
 | `multiple_choice` | Radio buttons (single) or checkboxes (multi) |
 | `date` | Calendar picker with time slots and timezone |
-| `address` | Address autocomplete (Google Places) |
+| `address` | Address autocomplete using Bloom's public places endpoint by default |
 | `personal_info` | Grouped input fields (name, email, phone) |
 | `text` | Single-line text input |
 | `textarea` | Multi-line text input |

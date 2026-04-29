@@ -360,8 +360,11 @@ export function useBloomForm(config: BloomFormConfig) {
   }, [currentStepConfig, state.answerGroupId, buildPayload, setSubmitting, setError, nextStep]);
 
   const handleSubmit = useCallback(async () => {
+    const stepSaved = await submitStepData();
+    if (!stepSaved) return;
+
     await finalizeSubmission();
-  }, [finalizeSubmission]);
+  }, [submitStepData, finalizeSubmission]);
 
   const handleReset = useCallback(() => {
     reset();

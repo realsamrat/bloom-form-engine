@@ -1,7 +1,7 @@
 import chalk from "chalk";
 import { askText, askNumber, askSelect, askConfirm } from "../utils/prompts";
 import { writeFile, readFile, resolveFromRoot, fileExists } from "../utils/fs";
-import { generateFormComponent, generatePageRoute, toKebabCase, type StepConfig } from "../utils/form-generator";
+import { generateBloomProxyRoute, generateFormComponent, generatePageRoute, toKebabCase, type StepConfig } from "../utils/form-generator";
 import * as path from "path";
 
 export async function addCommand(): Promise<void> {
@@ -126,6 +126,7 @@ export async function addCommand(): Promise<void> {
   console.log(chalk.gray("  Enter your deployed proxy/API domain now, or leave blank to set it up later."));
   const proxyBaseUrlInput = await askText("Proxy base URL (optional):", "");
   const proxyBaseUrl = proxyBaseUrlInput.trim() || undefined;
+  const proxyRouteOutput = getLocalProxyRouteOutput(proxyBaseUrl);
 
   // Generate the form component
   const componentContent = generateFormComponent(
@@ -154,10 +155,17 @@ export async function addCommand(): Promise<void> {
     writeFile(pagePath, generatePageRoute(fileName, componentImportPath));
   }
 
+  if (proxyRouteOutput) {
+    writeFile(resolveFromRoot(proxyRouteOutput), generateBloomProxyRoute());
+  }
+
   console.log("");
   console.log(chalk.green(`  ✓ Created ${outputDir}/${fileName}.tsx`));
   if (pageOutputDir) {
     console.log(chalk.green(`  ✓ Created ${pageOutputDir}/page.tsx`));
+  }
+  if (proxyRouteOutput) {
+    console.log(chalk.green(`  ✓ Created ${proxyRouteOutput}`));
   }
   console.log("");
   console.log(chalk.bold("  Usage:"));
@@ -172,4 +180,13 @@ export async function addCommand(): Promise<void> {
 function toImportPath(relativePath: string): string {
   const normalized = relativePath.split(path.sep).join("/");
   return normalized.startsWith(".") ? normalized : `./${normalized}`;
+}
+
+function getLocalProxyRouteOutput(proxyBaseUrl: string | undefined): string | null {
+  if (!proxyBaseUrl || /^https?:\/\//i.test(proxyBaseUrl)) return null;
+
+  const cleanPath = proxyBaseUrl.replace(/^\/+/, "").replace(/\/+$/, "");
+  if (!cleanPath.startsWith("api/")) return null;
+
+  return `./app/${cleanPath}/[...path]/route.ts`;
 }
