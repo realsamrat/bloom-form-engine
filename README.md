@@ -6,10 +6,32 @@ Give the CLI a Bloom form URL and it can generate a custom React form that is al
 
 ## Quick Start
 
-### 1. Install
+### New project: one-command setup
+
+If you are inside an empty folder and want BloomForm Engine to create the app shell for you, run:
+
+```bash
+npx bloom-form-engine@latest setup
+```
+
+The setup command detects whether a supported framework already exists. If no framework is found, it asks whether to create a Next.js App Router app or a Vite React app, installs the required packages, creates `bloom-form.config.ts`, creates `bloom-form-theme.css`, and wires theme/global CSS where the framework supports it.
+
+To use the recommended Next.js setup without prompts:
+
+```bash
+npx bloom-form-engine@latest setup --yes
+```
+
+### Existing project: install
 
 ```bash
 npm install bloom-form-engine
+```
+
+This installs BloomForm Engine inside the current project folder, not globally. During local installs, the postinstall helper skips framework checks for global installs and otherwise detects your project framework. If a framework is missing or theme/CSS wiring is incomplete, it points you to the interactive setup flow:
+
+```bash
+npx bloom-form-engine setup
 ```
 
 During installation, BloomForm Engine checks for the required peer dependencies. When your package manager allows interactive lifecycle prompts, the installer lets you choose `react`, `react-dom`, `framer-motion`, or all required dependencies and installs the selected packages for you.
@@ -26,7 +48,7 @@ You can also run the peer dependency helper any time:
 npx bloom-form-engine peers
 ```
 
-### 2. Initialize
+### Initialize
 
 ```bash
 npx bloom-form-engine init
@@ -34,13 +56,13 @@ npx bloom-form-engine init
 
 This creates a `bloom-form.config.ts` and a theme CSS file in your project.
 
-### 3. Connect your Bloom account
+### Connect your Bloom account
 
 ```bash
 npx bloom-form-engine connect
 ```
 
-### 4. Add a form
+### Add a form
 
 ```bash
 npx bloom-form-engine add
@@ -137,6 +159,8 @@ For Tailwind v4 projects created by `create-next-app`, the CLI automatically add
 ```css
 @source "../node_modules/bloom-form-engine/dist/**/*.js";
 ```
+
+The setup command also looks for common global CSS locations such as `app/globals.css`, `src/app/globals.css`, `src/index.css`, and `src/App.css`. When it finds a CSS file, it imports `bloom-form-theme.css`; when it finds Tailwind v4, it also adds the `@source` directive so package classes are available immediately.
 
 If your app does not use Tailwind, keep the generated component and page as the wiring layer, then replace the class names with your own styles while keeping the generated `BloomFormConfig`.
 
@@ -245,13 +269,13 @@ The generated proxy route allows `x-account` in `Access-Control-Allow-Headers`, 
 
 ## New Next.js Apps
 
-If you are starting from scratch, create the app with the Next.js starter:
+If you are starting from scratch inside an empty folder, the shortest path is:
 
 ```bash
-npx create-next-app@latest my-bloom-form
+npx bloom-form-engine@latest setup --yes
 ```
 
-Then install BloomForm Engine and run the import command inside that app. You should not need to manually change `"type"` in `package.json` or rename config files. Those fixes are only needed if you hand-roll a Next app with plain `npm init`, because recent npm versions can create `"type": "commonjs"` while Next.js app files use ES modules.
+That creates a Next.js App Router app, installs BloomForm Engine's dependencies, creates `bloom-form.config.ts`, creates `bloom-form-theme.css`, and wires the global CSS. Then run the import command inside that app. You should not need to manually change `"type"` in `package.json` or rename config files. Those fixes are only needed if you hand-roll a Next app with plain `npm init`, because recent npm versions can create `"type": "commonjs"` while Next.js app files use ES modules.
 
 In Tailwind v4 apps, the CLI updates `app/globals.css` so Tailwind scans BloomForm Engine's compiled component classes. In Tailwind v3 apps, use the `content` setting shown above if your project does not already scan package code.
 

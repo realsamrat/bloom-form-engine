@@ -6,18 +6,27 @@ import { connectCommand } from "./commands/connect";
 import { addCommand } from "./commands/add";
 import { importCommand } from "./commands/import";
 import { peersCommand } from "./commands/peers";
+import { setupCommand } from "./commands/setup";
 
 const program = new Command();
 
 program
   .name("bloom-form-engine")
   .description("CLI for BloomForm Engine - themeable, config-driven multi-step forms for Bloom.io")
-  .version("0.2.2");
+  .version("0.2.5");
 
 program
   .command("init")
   .description("Initialize BloomForm Engine in your project")
   .action(initCommand);
+
+program
+  .command("setup")
+  .description("Detect or create a React framework and prepare BloomForm Engine wiring")
+  .option("--framework <framework>", "Framework to create when none is detected: next, vite, or none")
+  .option("-y, --yes", "Use recommended defaults without prompts")
+  .option("--skip-install", "Do not install missing packages")
+  .action(setupCommand);
 
 program
   .command("connect")
