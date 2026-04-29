@@ -211,7 +211,7 @@ export default function AddressAutocomplete({
         <ul
           id="address-suggestions"
           role="listbox"
-          className="absolute top-full left-0 right-0 z-50 mt-1 max-h-[min(320px,45vh)] bg-[var(--bf-color-bg)] border border-[var(--bf-color-border)] rounded-[var(--bf-radius)] shadow-lg overflow-y-auto origin-top bf-animate-dropdown-enter"
+          className="absolute top-full left-0 right-0 z-50 mt-1 max-h-[min(320px,45vh)] bg-[var(--bf-color-bg)] text-[var(--bf-color-text)] border border-[var(--bf-color-border)] rounded-[var(--bf-radius)] shadow-lg overflow-y-auto origin-top bf-animate-dropdown-enter"
         >
           {suggestions.map((suggestion, index) => (
             <li
@@ -221,7 +221,7 @@ export default function AddressAutocomplete({
               onClick={() => handleSelect(suggestion)}
               onMouseEnter={() => setHighlightedIndex(index)}
               className={`
-                px-4 py-3 cursor-pointer text-sm transition-colors duration-75 ease-out
+                px-4 py-3 cursor-pointer text-sm text-[var(--bf-color-text)] transition-colors duration-75 ease-out
                 motion-reduce:transition-none
                 ${highlightedIndex === index ? "bg-gray-100" : "hover:bg-gray-50"}
               `}
