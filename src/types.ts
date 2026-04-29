@@ -14,6 +14,7 @@ export interface BloomFormConfig {
 
   // Optional settings
   placesEndpoint?: string;
+  proxyBaseUrl?: string;
 
   // Optional
   successMessage?: {

@@ -1,7 +1,14 @@
 import chalk from "chalk";
 import { askConfirm, askText } from "../utils/prompts";
 import { fileExists, readFile, resolveFromRoot, writeFile } from "../utils/fs";
-import { generateFormComponent, toCamelCase, toPascalCase, type StepConfig } from "../utils/form-generator";
+import {
+  generateFormComponent,
+  generatePageRoute,
+  toCamelCase,
+  toKebabCase,
+  toPascalCase,
+  type StepConfig,
+} from "../utils/form-generator";
 import * as path from "path";
 
 const BLOOM_BASE_URL = "https://api.bloom.io/api";
@@ -11,6 +18,9 @@ interface ImportOptions {
   output?: string;
   account?: string;
   form?: string;
+  proxy?: string;
+  pageOutput?: string;
+  noPage?: boolean;
   summary?: boolean;
   yes?: boolean;
 }
@@ -101,7 +111,11 @@ export async function importCommand(url: string, options: ImportOptions = {}): P
     plainText(questionnaire.outroText) ||
     "Thank you for taking a moment to answer these questions. You can expect to hear back soon.";
 
-  printImportSummary(accountId, formId, componentName, steps);
+  const proxyBaseUrl = await resolveProxyBaseUrl(options.proxy, options.yes);
+  const shouldCreatePage = options.noPage !== true;
+  const pageOutputDir = options.pageOutput || `./app/${toKebabCase(componentName.replace(/Form$/, ""), "bloom-form")}`;
+
+  printImportSummary(accountId, formId, componentName, steps, proxyBaseUrl, shouldCreatePage ? pageOutputDir : null);
 
   if (!options.yes) {
     const proceed = await askConfirm("Create this form component?", true);
@@ -117,19 +131,50 @@ export async function importCommand(url: string, options: ImportOptions = {}): P
     formId,
     steps,
     successTitle,
-    successDescription
+    successDescription,
+    { proxyBaseUrl }
   );
 
   const outputPath = resolveFromRoot(path.join(outputDir, `${componentName}.tsx`));
   writeFile(outputPath, componentContent);
 
+  if (shouldCreatePage) {
+    const pagePath = resolveFromRoot(path.join(pageOutputDir, "page.tsx"));
+    const componentImportPath = toImportPath(path.relative(path.dirname(pagePath), outputPath).replace(/\.tsx$/, ""));
+    const pageContent = generatePageRoute(componentName, componentImportPath);
+    writeFile(pagePath, pageContent);
+  }
+
   console.log("");
   console.log(chalk.green(`  ✓ Created ${outputDir}/${componentName}.tsx`));
+  if (shouldCreatePage) {
+    console.log(chalk.green(`  ✓ Created ${pageOutputDir}/page.tsx`));
+  }
   console.log("");
   console.log(chalk.bold("  Usage:"));
   console.log(chalk.gray(`    import ${componentName} from '${outputDir}/${componentName}';`));
   console.log(chalk.gray(`    <${componentName} />`));
+  if (shouldCreatePage) {
+    console.log(chalk.gray(`    Visit the generated route at ${pageOutputDir.replace(/^\.\/app\/?/, "/") || "/"}`));
+  }
   console.log("");
+}
+
+async function resolveProxyBaseUrl(optionValue: string | undefined, skipPrompt: boolean | undefined): Promise<string | undefined> {
+  if (optionValue) return optionValue;
+  if (skipPrompt) return undefined;
+
+  console.log("");
+  console.log(chalk.yellow("  Bloom can reject submissions from localhost."));
+  console.log(chalk.gray("  Enter your deployed proxy/API domain now, or leave blank to set it up later."));
+
+  const value = await askText("Proxy base URL (optional):", "");
+  return value.trim() || undefined;
+}
+
+function toImportPath(relativePath: string): string {
+  const normalized = relativePath.split(path.sep).join("/");
+  return normalized.startsWith(".") ? normalized : `./${normalized}`;
 }
 
 function getOutputDir(configContent: string | null): string | null {
@@ -373,11 +418,17 @@ function printImportSummary(
   accountId: string,
   formId: string,
   componentName: string,
-  steps: StepConfig[]
+  steps: StepConfig[],
+  proxyBaseUrl: string | undefined,
+  pageOutputDir: string | null
 ): void {
   console.log(chalk.gray(`  Account: ${accountId}`));
   console.log(chalk.gray(`  Form:    ${formId}`));
   console.log(chalk.gray(`  Output:  ${componentName}.tsx`));
+  console.log(chalk.gray(`  Proxy:   ${proxyBaseUrl || "set up later"}`));
+  if (pageOutputDir) {
+    console.log(chalk.gray(`  Page:    ${pageOutputDir}/page.tsx`));
+  }
   console.log("");
   console.log(chalk.bold("  Detected steps:"));
   for (const step of steps) {

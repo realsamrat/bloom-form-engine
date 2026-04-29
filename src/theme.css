@@ -7,8 +7,8 @@
 
 :root {
   /* Typography */
-  --bf-font-heading: system-ui, -apple-system, sans-serif;
-  --bf-font-body: system-ui, -apple-system, sans-serif;
+  --bf-font-heading: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --bf-font-body: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 
   /* Colors - Primary */
   --bf-color-accent: #cee542;
@@ -35,6 +35,40 @@
   /* Border Radius */
   --bf-radius: 10px;
   --bf-radius-card: 12px;
+
+  /* Starter page layout */
+  --bf-page-bg: #f7f7f5;
+  --bf-page-padding: 24px;
+  --bf-page-mobile-padding: 16px;
+  --bf-form-width: 440px;
+}
+
+.bf-starter-page {
+  min-height: 100svh;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--bf-page-padding);
+  background: var(--bf-page-bg);
+  font-family: var(--bf-font-body);
+}
+
+.bf-starter-form-shell {
+  width: 100%;
+  max-width: var(--bf-form-width);
+}
+
+@media (max-width: 640px) {
+  .bf-starter-page {
+    min-height: 100dvh;
+    padding: var(--bf-page-mobile-padding);
+    align-items: center;
+  }
+
+  .bf-starter-form-shell {
+    max-width: 100%;
+  }
 }
 
 /* ========================================

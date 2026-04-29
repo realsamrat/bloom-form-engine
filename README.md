@@ -56,6 +56,13 @@ npx bloom-form-engine import "https://your-account.bloom.io/your-form"
 
 The importer fetches Bloom's public form configuration, detects the account ID, form ID, question IDs, step types, multiple-choice options, personal-info fields, required flags, and success message, then generates a ready-to-use React component. The generated component submits to Bloom automatically through the same answer-group, answer, availability, timezone, and final-submit endpoints used by Bloom forms.
 
+The CLI creates two starter files:
+
+- A themed form component that imports BloomForm Engine's Perfect Booth-style starter theme.
+- A Next.js `app` route page that centers the form vertically and horizontally, loads Google Inter, and stays mobile-friendly by default.
+
+Bloom may reject browser submissions from `localhost`, so the CLI also asks for an optional proxy/API base URL. Leave it blank to set the proxy up later.
+
 You can also pass Bloom's public API URL directly:
 
 ```bash
@@ -68,6 +75,12 @@ Useful options:
 
 ```bash
 npx bloom-form-engine import "<bloom-url>" --name RentalQuote --output ./components/forms --summary
+```
+
+To set the submission proxy immediately:
+
+```bash
+npx bloom-form-engine import "<bloom-url>" --proxy "https://your-domain.com/api/bloom"
 ```
 
 Generated forms use the package's standard theme by default. Import the base stylesheet, then override CSS variables to match your brand.
@@ -125,6 +138,13 @@ Override CSS variables to match your brand:
   --bf-radius: 10px;
   --bf-radius-card: 12px;
 }
+```
+
+The default starter theme mirrors the Perfect Booth form treatment while using Inter instead of Perfect Booth's custom brand fonts. It also includes these layout helpers for generated pages:
+
+```css
+.bf-starter-page
+.bf-starter-form-shell
 ```
 
 ## Step Types

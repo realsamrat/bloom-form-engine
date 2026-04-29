@@ -25,16 +25,22 @@ interface BloomAggregatedResponse {
 export class BloomApiClient {
   private accountId: string;
   private formId: string;
+  private baseUrl: string;
   private questionIds: Map<string, string>;
 
   constructor(config: BloomFormConfig) {
     this.accountId = config.accountId;
     this.formId = config.formId;
+    this.baseUrl = normalizeBaseUrl(config.proxyBaseUrl || BLOOM_BASE_URL);
     this.questionIds = new Map(
       config.steps
         .filter(step => step.questionId)
         .map(step => [step.id, step.questionId])
     );
+  }
+
+  private endpoint(path: string): string {
+    return `${this.baseUrl}${path.startsWith("/") ? path : `/${path}`}`;
   }
 
   private getHeaders(): HeadersInit {
@@ -48,7 +54,7 @@ export class BloomApiClient {
   // Create a new answer group (called on form mount)
   async createAnswerGroup(): Promise<string> {
     const response = await fetch(
-      `${BLOOM_BASE_URL}/questionnaires/${this.formId}/answer-groups`,
+      this.endpoint(`/questionnaires/${this.formId}/answer-groups`),
       {
         method: "POST",
         headers: this.getHeaders(),
@@ -77,7 +83,7 @@ export class BloomApiClient {
     }
 
     const response = await fetch(
-      `${BLOOM_BASE_URL}/questionnaires/${this.formId}/answers`,
+      this.endpoint(`/questionnaires/${this.formId}/answers`),
       {
         method: "POST",
         headers: this.getHeaders(),
@@ -99,7 +105,7 @@ export class BloomApiClient {
   // Finalize the form submission
   async finalizeSubmission(answerGroupId: string): Promise<void> {
     const response = await fetch(
-      `${BLOOM_BASE_URL}/questionnaires/${this.formId}/answers`,
+      this.endpoint(`/questionnaires/${this.formId}/answers`),
       {
         method: "POST",
         headers: this.getHeaders(),
@@ -119,7 +125,7 @@ export class BloomApiClient {
 
   // Fetch available timezones
   async fetchTimezones(): Promise<TimezoneData[]> {
-    const response = await fetch(`${BLOOM_BASE_URL}/timezones`, {
+    const response = await fetch(this.endpoint("/timezones"), {
       method: "GET",
       headers: this.getHeaders(),
     });
@@ -203,7 +209,7 @@ export class BloomApiClient {
       questionId,
     });
 
-    const url = `${BLOOM_BASE_URL}/aggregated-availability/${this.accountId}?${params}`;
+    const url = this.endpoint(`/aggregated-availability/${this.accountId}?${params}`);
 
     const response = await fetch(url, {
       method: "GET",
@@ -243,6 +249,10 @@ export class BloomApiClient {
   getQuestionId(stepId: string): string | undefined {
     return this.questionIds.get(stepId);
   }
+}
+
+function normalizeBaseUrl(value: string): string {
+  return value.replace(/\/+$/, "");
 }
 
 // Utility: Convert aggregated availability to TimeSlot array for a specific date

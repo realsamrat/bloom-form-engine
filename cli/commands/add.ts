@@ -1,7 +1,7 @@
 import chalk from "chalk";
 import { askText, askNumber, askSelect, askConfirm } from "../utils/prompts";
 import { writeFile, readFile, resolveFromRoot, fileExists } from "../utils/fs";
-import { generateFormComponent, type StepConfig } from "../utils/form-generator";
+import { generateFormComponent, generatePageRoute, toKebabCase, type StepConfig } from "../utils/form-generator";
 import * as path from "path";
 
 export async function addCommand(): Promise<void> {
@@ -120,6 +120,13 @@ export async function addCommand(): Promise<void> {
     "Thank you for taking a moment to answer these questions. You can expect to hear back from us within 24 hours."
   );
 
+  console.log("");
+  console.log(chalk.bold("  Bloom Submission Proxy"));
+  console.log(chalk.yellow("  Bloom can reject submissions from localhost."));
+  console.log(chalk.gray("  Enter your deployed proxy/API domain now, or leave blank to set it up later."));
+  const proxyBaseUrlInput = await askText("Proxy base URL (optional):", "");
+  const proxyBaseUrl = proxyBaseUrlInput.trim() || undefined;
+
   // Generate the form component
   const componentContent = generateFormComponent(
     fileName,
@@ -127,17 +134,42 @@ export async function addCommand(): Promise<void> {
     formId,
     steps,
     successTitle,
-    successDescription
+    successDescription,
+    { proxyBaseUrl }
   );
 
   const outputPath = resolveFromRoot(path.join(outputDir, `${fileName}.tsx`));
   writeFile(outputPath, componentContent);
 
+  const createPage = await askConfirm("Create a centered Next.js page route for this form?", true);
+  let pageOutputDir: string | null = null;
+
+  if (createPage) {
+    pageOutputDir = await askText(
+      "Page route directory:",
+      `./app/${toKebabCase(formName, "bloom-form")}`
+    );
+    const pagePath = resolveFromRoot(path.join(pageOutputDir, "page.tsx"));
+    const componentImportPath = toImportPath(path.relative(path.dirname(pagePath), outputPath).replace(/\.tsx$/, ""));
+    writeFile(pagePath, generatePageRoute(fileName, componentImportPath));
+  }
+
   console.log("");
   console.log(chalk.green(`  ✓ Created ${outputDir}/${fileName}.tsx`));
+  if (pageOutputDir) {
+    console.log(chalk.green(`  ✓ Created ${pageOutputDir}/page.tsx`));
+  }
   console.log("");
   console.log(chalk.bold("  Usage:"));
   console.log(chalk.gray(`    import ${fileName} from '${outputDir}/${fileName}';`));
   console.log(chalk.gray(`    <${fileName} />`));
+  if (pageOutputDir) {
+    console.log(chalk.gray(`    Visit the generated route at ${pageOutputDir.replace(/^\.\/app\/?/, "/") || "/"}`));
+  }
   console.log("");
+}
+
+function toImportPath(relativePath: string): string {
+  const normalized = relativePath.split(path.sep).join("/");
+  return normalized.startsWith(".") ? normalized : `./${normalized}`;
 }

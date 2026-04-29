@@ -10,6 +10,10 @@ export interface StepConfig {
   required?: boolean;
 }
 
+interface GenerateFormOptions {
+  proxyBaseUrl?: string;
+}
+
 function escapeString(value: string): string {
   return value.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
 }
@@ -32,13 +36,24 @@ export function toCamelCase(value: string, fallback = "importedBloom"): string {
   return pascal.charAt(0).toLowerCase() + pascal.slice(1);
 }
 
+export function toKebabCase(value: string, fallback = "bloom-form"): string {
+  const words = value
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .split(/[^a-zA-Z0-9]+/)
+    .filter(Boolean)
+    .map(word => word.toLowerCase());
+
+  return words.join("-") || fallback;
+}
+
 export function generateFormComponent(
   name: string,
   accountId: string,
   formId: string,
   steps: StepConfig[],
   successTitle: string,
-  successDescription: string
+  successDescription: string,
+  options: GenerateFormOptions = {}
 ): string {
   const configName = `${toCamelCase(name)}Config`;
   const stepsStr = steps.map(step => {
@@ -81,10 +96,12 @@ export function generateFormComponent(
 
 import { BloomForm } from 'bloom-form-engine';
 import type { BloomFormConfig } from 'bloom-form-engine';
+import 'bloom-form-engine/src/theme.css';
 
 const ${configName}: BloomFormConfig = {
   accountId: '${escapeString(accountId)}',
   formId: '${escapeString(formId)}',
+${options.proxyBaseUrl ? `  proxyBaseUrl: '${escapeString(options.proxyBaseUrl)}',\n` : ""}
   steps: [
 ${stepsStr},
   ],
@@ -100,7 +117,28 @@ interface ${name}Props {
 }
 
 export default function ${name}({ stickyFooter = false, onSuccess }: ${name}Props) {
-  return <BloomForm config={${configName}} stickyFooter={stickyFooter} onSuccess={onSuccess} />;
+  return (
+    <div className="bf-starter-form-shell">
+      <BloomForm config={${configName}} stickyFooter={stickyFooter} onSuccess={onSuccess} />
+    </div>
+  );
+}
+`;
+}
+
+export function generatePageRoute(componentName: string, componentImportPath: string): string {
+  return `import { Inter } from 'next/font/google';
+import ${componentName} from '${componentImportPath}';
+import 'bloom-form-engine/src/theme.css';
+
+const inter = Inter({ subsets: ['latin'] });
+
+export default function ${componentName}Page() {
+  return (
+    <main className={\`\${inter.className} bf-starter-page\`}>
+      <${componentName} />
+    </main>
+  );
 }
 `;
 }

@@ -12,7 +12,7 @@ const program = new Command();
 program
   .name("bloom-form-engine")
   .description("CLI for BloomForm Engine - themeable, config-driven multi-step forms for Bloom.io")
-  .version("0.2.1");
+  .version("0.2.2");
 
 program
   .command("init")
@@ -37,6 +37,9 @@ program
   .option("-o, --output <dir>", "Output directory")
   .option("--account <accountId>", "Bloom account ID override")
   .option("--form <formId>", "Bloom form/questionnaire ID override")
+  .option("--proxy <url>", "Proxy/API base URL for Bloom submissions")
+  .option("--page-output <dir>", "Next.js app route directory for the centered starter page")
+  .option("--no-page", "Skip creating the centered starter page route")
   .option("--summary", "Add a final review/summary step")
   .option("-y, --yes", "Write the generated component without confirmation")
   .action(importCommand);
