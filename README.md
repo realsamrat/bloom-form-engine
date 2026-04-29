@@ -71,6 +71,14 @@ npx bloom-form-engine import "<bloom-url>" --proxy "/api/bloom"
 
 That writes `app/api/bloom/[...path]/route.ts`. Browser requests go to your app first, and the route forwards only the Bloom headers that are needed, so localhost `Origin` and `Referer` headers are not sent upstream to Bloom.
 
+You can also enter the domain you plan to deploy to:
+
+```bash
+npx bloom-form-engine import "<bloom-url>" --proxy "rosecitybooth.com"
+```
+
+The generated form still uses same-origin `proxyBaseUrl: "/api/bloom"` and writes `app/api/bloom/[...path]/route.ts`. That means localhost testing goes to `http://localhost:3000/api/bloom/...`, and production goes to `https://rosecitybooth.com/api/bloom/...` after you deploy the same app. This avoids browser CORS errors from sending `x-account` to an external domain during local development.
+
 You can also pass Bloom's public API URL directly:
 
 ```bash
@@ -85,11 +93,13 @@ Useful options:
 npx bloom-form-engine import "<bloom-url>" --name RentalQuote --output ./components/forms --summary
 ```
 
-To set the submission proxy immediately:
+To set the submission proxy immediately with a deployed app domain:
 
 ```bash
 npx bloom-form-engine import "<bloom-url>" --proxy "https://your-domain.com/api/bloom"
 ```
+
+This also generates same-origin `proxyBaseUrl: "/api/bloom"` for the app. Use the full domain as a deployment hint, not as a browser-side cross-origin API base.
 
 Address autocomplete uses Bloom's public places endpoint by default, so generated address steps work from localhost without a Google Maps key. You can still override `placesEndpoint` in your `BloomFormConfig` if you want to use your own Google Places route.
 
@@ -103,7 +113,7 @@ When you import a Bloom URL, the starter is intentionally ready-made:
 - A centered Next.js page route such as `app/get-quote/page.tsx`.
 - The Perfect Booth-style base theme using Inter by default, with question titles shown in normal case rather than forced all-caps.
 - Address autocomplete through Bloom's places endpoint.
-- Optional local proxy generation at `app/api/bloom/[...path]/route.ts` when you pass `--proxy "/api/bloom"`.
+- Optional local proxy generation at `app/api/bloom/[...path]/route.ts` when you pass `--proxy "/api/bloom"`, `--proxy "example.com"`, or `--proxy "https://example.com/api/bloom"`.
 
 For most Next.js + Tailwind projects, the generated files are enough. Make sure your global CSS includes Tailwind and your Tailwind content config scans the package output:
 
@@ -120,6 +130,12 @@ export default {
   },
   plugins: [],
 };
+```
+
+For Tailwind v4 projects created by `create-next-app`, the CLI automatically adds this source directive to `app/globals.css` when it sees `@import "tailwindcss"`:
+
+```css
+@source "../node_modules/bloom-form-engine/dist/**/*.js";
 ```
 
 If your app does not use Tailwind, keep the generated component and page as the wiring layer, then replace the class names with your own styles while keeping the generated `BloomFormConfig`.
@@ -219,11 +235,25 @@ npx bloom-form-engine import "https://your-account.bloom.io/your-form" --proxy "
 
 The generated route forwards requests to `https://api.bloom.io/api`, preserves only the headers Bloom needs, strips localhost `Origin` and `Referer`, supports `GET`, `POST`, and `OPTIONS`, and adds browser-friendly CORS headers.
 
-For production, deploy the same route with your app and keep `proxyBaseUrl: "/api/bloom"` in the generated config. You can also use a full deployed URL:
+For production, deploy the same route with your app and keep `proxyBaseUrl: "/api/bloom"` in the generated config. If you pass a domain to the CLI, the CLI treats that as your deploy target and still generates same-origin `/api/bloom` so local development does not make cross-origin requests.
 
 ```tsx
-proxyBaseUrl: 'https://your-domain.com/api/bloom'
+proxyBaseUrl: '/api/bloom'
 ```
+
+The generated proxy route allows `x-account` in `Access-Control-Allow-Headers`, so browser preflight requests can succeed when the request goes through your same-origin Next.js route.
+
+## New Next.js Apps
+
+If you are starting from scratch, create the app with the Next.js starter:
+
+```bash
+npx create-next-app@latest my-bloom-form
+```
+
+Then install BloomForm Engine and run the import command inside that app. You should not need to manually change `"type"` in `package.json` or rename config files. Those fixes are only needed if you hand-roll a Next app with plain `npm init`, because recent npm versions can create `"type": "commonjs"` while Next.js app files use ES modules.
+
+In Tailwind v4 apps, the CLI updates `app/globals.css` so Tailwind scans BloomForm Engine's compiled component classes. In Tailwind v3 apps, use the `content` setting shown above if your project does not already scan package code.
 
 ## Peer Dependencies
 

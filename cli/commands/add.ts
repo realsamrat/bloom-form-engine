@@ -4,6 +4,12 @@ import { writeFile, readFile, resolveFromRoot, fileExists } from "../utils/fs";
 import { generateBloomProxyRoute, generateFormComponent, generatePageRoute, toKebabCase, type StepConfig } from "../utils/form-generator";
 import * as path from "path";
 
+interface ProxyConfig {
+  proxyBaseUrl?: string;
+  proxyRouteOutput: string | null;
+  proxyDisplay: string;
+}
+
 export async function addCommand(): Promise<void> {
   console.log("");
   console.log(chalk.bold("  Add a New Form"));
@@ -123,10 +129,9 @@ export async function addCommand(): Promise<void> {
   console.log("");
   console.log(chalk.bold("  Bloom Submission Proxy"));
   console.log(chalk.yellow("  Bloom can reject submissions from localhost."));
-  console.log(chalk.gray("  Enter your deployed proxy/API domain now, or leave blank to set it up later."));
+  console.log(chalk.gray("  Enter your deployed app domain (example.com), a same-origin API path (/api/bloom), or leave blank to set it up later."));
   const proxyBaseUrlInput = await askText("Proxy base URL (optional):", "");
-  const proxyBaseUrl = proxyBaseUrlInput.trim() || undefined;
-  const proxyRouteOutput = getLocalProxyRouteOutput(proxyBaseUrl);
+  const proxyConfig = normalizeProxyInput(proxyBaseUrlInput);
 
   // Generate the form component
   const componentContent = generateFormComponent(
@@ -136,7 +141,7 @@ export async function addCommand(): Promise<void> {
     steps,
     successTitle,
     successDescription,
-    { proxyBaseUrl }
+    { proxyBaseUrl: proxyConfig.proxyBaseUrl }
   );
 
   const outputPath = resolveFromRoot(path.join(outputDir, `${fileName}.tsx`));
@@ -155,17 +160,22 @@ export async function addCommand(): Promise<void> {
     writeFile(pagePath, generatePageRoute(fileName, componentImportPath));
   }
 
-  if (proxyRouteOutput) {
-    writeFile(resolveFromRoot(proxyRouteOutput), generateBloomProxyRoute());
+  if (proxyConfig.proxyRouteOutput) {
+    writeFile(resolveFromRoot(proxyConfig.proxyRouteOutput), generateBloomProxyRoute());
   }
+
+  const updatedCssPath = pageOutputDir ? ensureTailwindV4PackageSource() : null;
 
   console.log("");
   console.log(chalk.green(`  ✓ Created ${outputDir}/${fileName}.tsx`));
   if (pageOutputDir) {
     console.log(chalk.green(`  ✓ Created ${pageOutputDir}/page.tsx`));
   }
-  if (proxyRouteOutput) {
-    console.log(chalk.green(`  ✓ Created ${proxyRouteOutput}`));
+  if (proxyConfig.proxyRouteOutput) {
+    console.log(chalk.green(`  ✓ Created ${proxyConfig.proxyRouteOutput}`));
+  }
+  if (updatedCssPath) {
+    console.log(chalk.green(`  ✓ Updated ${updatedCssPath}`));
   }
   console.log("");
   console.log(chalk.bold("  Usage:"));
@@ -182,11 +192,82 @@ function toImportPath(relativePath: string): string {
   return normalized.startsWith(".") ? normalized : `./${normalized}`;
 }
 
+function normalizeProxyInput(value: string | undefined): ProxyConfig {
+  const raw = value?.trim();
+  if (!raw) {
+    return {
+      proxyBaseUrl: undefined,
+      proxyRouteOutput: null,
+      proxyDisplay: "set up later",
+    };
+  }
+
+  if (/^https?:\/\//i.test(raw)) {
+    const url = new URL(raw);
+    const path = normalizeProxyPath(url.pathname && url.pathname !== "/" ? url.pathname : "/api/bloom");
+    return {
+      proxyBaseUrl: path,
+      proxyRouteOutput: getLocalProxyRouteOutput(path),
+      proxyDisplay: `${url.host} via same-origin ${path}`,
+    };
+  }
+
+  const looksLikeDomain = /^[a-z0-9.-]+\.[a-z]{2,}(?::\d+)?(?:\/.*)?$/i.test(raw);
+  if (looksLikeDomain) {
+    const slashIndex = raw.indexOf("/");
+    const domain = slashIndex === -1 ? raw : raw.slice(0, slashIndex);
+    const path = normalizeProxyPath(slashIndex === -1 ? "/api/bloom" : raw.slice(slashIndex));
+    return {
+      proxyBaseUrl: path,
+      proxyRouteOutput: getLocalProxyRouteOutput(path),
+      proxyDisplay: `${domain} via same-origin ${path}`,
+    };
+  }
+
+  const path = normalizeProxyPath(raw);
+  return {
+    proxyBaseUrl: path,
+    proxyRouteOutput: getLocalProxyRouteOutput(path),
+    proxyDisplay: path,
+  };
+}
+
+function normalizeProxyPath(value: string): string {
+  const cleanPath = value.replace(/^\/+/, "").replace(/\/+$/, "") || "api/bloom";
+  return `/${cleanPath}`;
+}
+
 function getLocalProxyRouteOutput(proxyBaseUrl: string | undefined): string | null {
-  if (!proxyBaseUrl || /^https?:\/\//i.test(proxyBaseUrl)) return null;
+  if (!proxyBaseUrl) return null;
 
   const cleanPath = proxyBaseUrl.replace(/^\/+/, "").replace(/\/+$/, "");
   if (!cleanPath.startsWith("api/")) return null;
 
   return `./app/${cleanPath}/[...path]/route.ts`;
+}
+
+function ensureTailwindV4PackageSource(): string | null {
+  const candidates = ["app/globals.css", "src/app/globals.css"];
+
+  for (const candidate of candidates) {
+    const cssPath = resolveFromRoot(candidate);
+    if (!fileExists(cssPath)) continue;
+
+    const content = readFile(cssPath) || "";
+    if (content.includes("bloom-form-engine/dist")) return null;
+    if (!content.includes('@import "tailwindcss"') && !content.includes("@import 'tailwindcss'")) return null;
+
+    const cssDir = path.dirname(cssPath);
+    let sourcePath = path.relative(cssDir, resolveFromRoot("node_modules/bloom-form-engine/dist")).split(path.sep).join("/");
+    if (!sourcePath.startsWith(".")) {
+      sourcePath = `./${sourcePath}`;
+    }
+
+    const sourceDirective = `@source "${sourcePath}/**/*.js";`;
+    const updated = content.replace(/(@import\s+["']tailwindcss["'];?)/, `$1\n${sourceDirective}`);
+    writeFile(cssPath, updated);
+    return `./${candidate}`;
+  }
+
+  return null;
 }

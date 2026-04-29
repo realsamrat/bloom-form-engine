@@ -62,6 +62,12 @@ interface DiscoveredIds {
   formId?: string;
 }
 
+interface ProxyConfig {
+  proxyBaseUrl?: string;
+  proxyRouteOutput: string | null;
+  proxyDisplay: string;
+}
+
 export async function importCommand(url: string, options: ImportOptions = {}): Promise<void> {
   console.log("");
   console.log(chalk.bold("  Import Bloom Form"));
@@ -112,12 +118,11 @@ export async function importCommand(url: string, options: ImportOptions = {}): P
     plainText(questionnaire.outroText) ||
     "Thank you for taking a moment to answer these questions. You can expect to hear back soon.";
 
-  const proxyBaseUrl = await resolveProxyBaseUrl(options.proxy, options.yes);
+  const proxyConfig = await resolveProxyConfig(options.proxy, options.yes);
   const shouldCreatePage = options.noPage !== true;
   const pageOutputDir = options.pageOutput || `./app/${toKebabCase(componentName.replace(/Form$/, ""), "bloom-form")}`;
-  const proxyRouteOutput = getLocalProxyRouteOutput(proxyBaseUrl);
 
-  printImportSummary(accountId, formId, componentName, steps, proxyBaseUrl, shouldCreatePage ? pageOutputDir : null, proxyRouteOutput);
+  printImportSummary(accountId, formId, componentName, steps, proxyConfig.proxyDisplay, shouldCreatePage ? pageOutputDir : null, proxyConfig.proxyRouteOutput);
 
   if (!options.yes) {
     const proceed = await askConfirm("Create this form component?", true);
@@ -134,7 +139,7 @@ export async function importCommand(url: string, options: ImportOptions = {}): P
     steps,
     successTitle,
     successDescription,
-    { proxyBaseUrl }
+    { proxyBaseUrl: proxyConfig.proxyBaseUrl }
   );
 
   const outputPath = resolveFromRoot(path.join(outputDir, `${componentName}.tsx`));
@@ -147,17 +152,22 @@ export async function importCommand(url: string, options: ImportOptions = {}): P
     writeFile(pagePath, pageContent);
   }
 
-  if (proxyRouteOutput) {
-    writeFile(resolveFromRoot(proxyRouteOutput), generateBloomProxyRoute());
+  if (proxyConfig.proxyRouteOutput) {
+    writeFile(resolveFromRoot(proxyConfig.proxyRouteOutput), generateBloomProxyRoute());
   }
+
+  const updatedCssPath = shouldCreatePage ? ensureTailwindV4PackageSource() : null;
 
   console.log("");
   console.log(chalk.green(`  ✓ Created ${outputDir}/${componentName}.tsx`));
   if (shouldCreatePage) {
     console.log(chalk.green(`  ✓ Created ${pageOutputDir}/page.tsx`));
   }
-  if (proxyRouteOutput) {
-    console.log(chalk.green(`  ✓ Created ${proxyRouteOutput}`));
+  if (proxyConfig.proxyRouteOutput) {
+    console.log(chalk.green(`  ✓ Created ${proxyConfig.proxyRouteOutput}`));
+  }
+  if (updatedCssPath) {
+    console.log(chalk.green(`  ✓ Updated ${updatedCssPath}`));
   }
   console.log("");
   console.log(chalk.bold("  Usage:"));
@@ -169,16 +179,16 @@ export async function importCommand(url: string, options: ImportOptions = {}): P
   console.log("");
 }
 
-async function resolveProxyBaseUrl(optionValue: string | undefined, skipPrompt: boolean | undefined): Promise<string | undefined> {
-  if (optionValue) return optionValue;
-  if (skipPrompt) return undefined;
+async function resolveProxyConfig(optionValue: string | undefined, skipPrompt: boolean | undefined): Promise<ProxyConfig> {
+  if (optionValue) return normalizeProxyInput(optionValue);
+  if (skipPrompt) return normalizeProxyInput(undefined);
 
   console.log("");
   console.log(chalk.yellow("  Bloom can reject submissions from localhost."));
-  console.log(chalk.gray("  Enter your deployed proxy/API domain now, or leave blank to set it up later."));
+  console.log(chalk.gray("  Enter your deployed app domain (example.com), a same-origin API path (/api/bloom), or leave blank to set it up later."));
 
   const value = await askText("Proxy base URL (optional):", "");
-  return value.trim() || undefined;
+  return normalizeProxyInput(value);
 }
 
 function toImportPath(relativePath: string): string {
@@ -186,13 +196,84 @@ function toImportPath(relativePath: string): string {
   return normalized.startsWith(".") ? normalized : `./${normalized}`;
 }
 
+function normalizeProxyInput(value: string | undefined): ProxyConfig {
+  const raw = value?.trim();
+  if (!raw) {
+    return {
+      proxyBaseUrl: undefined,
+      proxyRouteOutput: null,
+      proxyDisplay: "set up later",
+    };
+  }
+
+  if (/^https?:\/\//i.test(raw)) {
+    const url = new URL(raw);
+    const path = normalizeProxyPath(url.pathname && url.pathname !== "/" ? url.pathname : "/api/bloom");
+    return {
+      proxyBaseUrl: path,
+      proxyRouteOutput: getLocalProxyRouteOutput(path),
+      proxyDisplay: `${url.host} via same-origin ${path}`,
+    };
+  }
+
+  const looksLikeDomain = /^[a-z0-9.-]+\.[a-z]{2,}(?::\d+)?(?:\/.*)?$/i.test(raw);
+  if (looksLikeDomain) {
+    const slashIndex = raw.indexOf("/");
+    const domain = slashIndex === -1 ? raw : raw.slice(0, slashIndex);
+    const path = normalizeProxyPath(slashIndex === -1 ? "/api/bloom" : raw.slice(slashIndex));
+    return {
+      proxyBaseUrl: path,
+      proxyRouteOutput: getLocalProxyRouteOutput(path),
+      proxyDisplay: `${domain} via same-origin ${path}`,
+    };
+  }
+
+  const path = normalizeProxyPath(raw);
+  return {
+    proxyBaseUrl: path,
+    proxyRouteOutput: getLocalProxyRouteOutput(path),
+    proxyDisplay: path,
+  };
+}
+
+function normalizeProxyPath(value: string): string {
+  const cleanPath = value.replace(/^\/+/, "").replace(/\/+$/, "") || "api/bloom";
+  return `/${cleanPath}`;
+}
+
 function getLocalProxyRouteOutput(proxyBaseUrl: string | undefined): string | null {
-  if (!proxyBaseUrl || /^https?:\/\//i.test(proxyBaseUrl)) return null;
+  if (!proxyBaseUrl) return null;
 
   const cleanPath = proxyBaseUrl.replace(/^\/+/, "").replace(/\/+$/, "");
   if (!cleanPath.startsWith("api/")) return null;
 
   return `./app/${cleanPath}/[...path]/route.ts`;
+}
+
+function ensureTailwindV4PackageSource(): string | null {
+  const candidates = ["app/globals.css", "src/app/globals.css"];
+
+  for (const candidate of candidates) {
+    const cssPath = resolveFromRoot(candidate);
+    if (!fileExists(cssPath)) continue;
+
+    const content = readFile(cssPath) || "";
+    if (content.includes("bloom-form-engine/dist")) return null;
+    if (!content.includes('@import "tailwindcss"') && !content.includes("@import 'tailwindcss'")) return null;
+
+    const cssDir = path.dirname(cssPath);
+    let sourcePath = path.relative(cssDir, resolveFromRoot("node_modules/bloom-form-engine/dist")).split(path.sep).join("/");
+    if (!sourcePath.startsWith(".")) {
+      sourcePath = `./${sourcePath}`;
+    }
+
+    const sourceDirective = `@source "${sourcePath}/**/*.js";`;
+    const updated = content.replace(/(@import\s+["']tailwindcss["'];?)/, `$1\n${sourceDirective}`);
+    writeFile(cssPath, updated);
+    return `./${candidate}`;
+  }
+
+  return null;
 }
 
 function getOutputDir(configContent: string | null): string | null {
