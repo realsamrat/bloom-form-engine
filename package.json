@@ -1,6 +1,6 @@
 {
   "name": "bloom-form-engine",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "A themeable, config-driven multi-step form engine for Bloom.io",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -9,12 +9,14 @@
   },
   "files": [
     "dist",
+    "scripts",
     "src/theme.css",
     "README.md"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json && tsc -p tsconfig.cli.json",
     "build:cli": "tsc -p tsconfig.cli.json",
+    "postinstall": "node scripts/check-peer-deps.cjs",
     "prepublishOnly": "npm run build"
   },
   "peerDependencies": {

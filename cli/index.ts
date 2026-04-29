@@ -5,13 +5,14 @@ import { initCommand } from "./commands/init";
 import { connectCommand } from "./commands/connect";
 import { addCommand } from "./commands/add";
 import { importCommand } from "./commands/import";
+import { peersCommand } from "./commands/peers";
 
 const program = new Command();
 
 program
   .name("bloom-form-engine")
   .description("CLI for BloomForm Engine - themeable, config-driven multi-step forms for Bloom.io")
-  .version("0.2.0");
+  .version("0.2.1");
 
 program
   .command("init")
@@ -39,5 +40,10 @@ program
   .option("--summary", "Add a final review/summary step")
   .option("-y, --yes", "Write the generated component without confirmation")
   .action(importCommand);
+
+program
+  .command("peers")
+  .description("Check and optionally install BloomForm Engine peer dependencies")
+  .action(peersCommand);
 
 program.parse();

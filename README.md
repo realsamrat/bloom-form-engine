@@ -6,7 +6,27 @@ Give the CLI a Bloom form URL and it can generate a custom React form that is al
 
 ## Quick Start
 
-### 1. Initialize
+### 1. Install
+
+```bash
+npm install bloom-form-engine
+```
+
+During installation, BloomForm Engine checks for the required peer dependencies. When your package manager allows interactive lifecycle prompts, the installer lets you choose `react`, `react-dom`, `framer-motion`, or all required dependencies and installs the selected packages for you.
+
+If the install runs in a non-interactive environment, install them manually:
+
+```bash
+npm install react react-dom framer-motion
+```
+
+You can also run the peer dependency helper any time:
+
+```bash
+npx bloom-form-engine peers
+```
+
+### 2. Initialize
 
 ```bash
 npx bloom-form-engine init
@@ -14,13 +34,13 @@ npx bloom-form-engine init
 
 This creates a `bloom-form.config.ts` and a theme CSS file in your project.
 
-### 2. Connect your Bloom account
+### 3. Connect your Bloom account
 
 ```bash
 npx bloom-form-engine connect
 ```
 
-### 3. Add a form
+### 4. Add a form
 
 ```bash
 npx bloom-form-engine add
@@ -132,8 +152,10 @@ Override CSS variables to match your brand:
 ## Peer Dependencies
 
 - React >= 18
+- React DOM >= 18
 - Framer Motion >= 10
-- Tailwind CSS (for utility classes)
+
+The components use Tailwind-style utility class names alongside BloomForm Engine's CSS variables. If your app does not compile utility classes, keep the generated form as a starting point and restyle it with your own classes or wrapper UI.
 
 ## License
 
