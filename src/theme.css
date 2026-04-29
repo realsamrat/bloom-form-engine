@@ -1,0 +1,85 @@
+/* ========================================
+   BloomForm Engine - Default Theme
+   ========================================
+   Override these CSS variables in your project's
+   global CSS to customize the form appearance.
+   ======================================== */
+
+:root {
+  /* Typography */
+  --bf-font-heading: system-ui, -apple-system, sans-serif;
+  --bf-font-body: system-ui, -apple-system, sans-serif;
+
+  /* Colors - Primary */
+  --bf-color-accent: #cee542;
+  --bf-color-accent-hover: #cee542;
+  --bf-color-accent-bg: rgba(206, 229, 66, 0.2);
+
+  /* Colors - Feedback */
+  --bf-color-error: #C14141;
+  --bf-color-success-bg: #cee542;
+  --bf-color-success-text: #0c3406;
+
+  /* Colors - Neutral */
+  --bf-color-border: #e1e1e1;
+  --bf-color-border-idle: #e6e6e5;
+  --bf-color-bg: #ffffff;
+  --bf-color-bg-header: #f1f1f1;
+  --bf-color-text: #1c1c1c;
+  --bf-color-text-primary: #0e0e0f;
+  --bf-color-text-muted: #6c6c6c;
+  --bf-color-text-subtle: #797b86;
+  --bf-color-text-disabled: #d6d8e1;
+  --bf-color-text-calendar: #45454a;
+
+  /* Border Radius */
+  --bf-radius: 10px;
+  --bf-radius-card: 12px;
+}
+
+/* ========================================
+   Animations
+   ======================================== */
+
+/* Dropdown enter animation */
+@keyframes bf-dropdown-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.97) translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.bf-animate-dropdown-enter {
+  animation: bf-dropdown-enter 150ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  will-change: transform, opacity;
+}
+
+/* Time slot entrance animation */
+@keyframes bf-slot-enter {
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.bf-animate-slot-enter {
+  animation: bf-slot-enter 60ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  will-change: transform, opacity;
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .bf-animate-dropdown-enter,
+  .bf-animate-slot-enter {
+    animation: none;
+    opacity: 1;
+  }
+}
