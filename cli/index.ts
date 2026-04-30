@@ -13,7 +13,7 @@ const program = new Command();
 program
   .name("bloom-form-engine")
   .description("CLI for BloomForm Engine - themeable, config-driven multi-step forms for Bloom.io")
-  .version("0.2.5");
+  .version("0.2.6");
 
 program
   .command("init")

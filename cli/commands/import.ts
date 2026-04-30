@@ -21,6 +21,7 @@ interface ImportOptions {
   form?: string;
   proxy?: string;
   pageOutput?: string;
+  page?: boolean;
   noPage?: boolean;
   summary?: boolean;
   yes?: boolean;
@@ -32,7 +33,7 @@ interface BloomQuestion {
   description?: unknown;
   type: string;
   options?: {
-    fields?: string[];
+    fields?: unknown[];
     allowMultiSelect?: boolean;
     maxSelections?: number | null;
     [key: string]: unknown;
@@ -119,7 +120,7 @@ export async function importCommand(url: string, options: ImportOptions = {}): P
     "Thank you for taking a moment to answer these questions. You can expect to hear back soon.";
 
   const proxyConfig = await resolveProxyConfig(options.proxy, options.yes);
-  const shouldCreatePage = options.noPage !== true;
+  const shouldCreatePage = options.page !== false && options.noPage !== true;
   const pageOutputDir = options.pageOutput || `./app/${toKebabCase(componentName.replace(/Form$/, ""), "bloom-form")}`;
 
   printImportSummary(accountId, formId, componentName, steps, proxyConfig.proxyDisplay, shouldCreatePage ? pageOutputDir : null, proxyConfig.proxyRouteOutput);
@@ -406,19 +407,16 @@ function questionnaireToSteps(questionnaire: BloomQuestionnaire): StepConfig[] {
       const options = question.options?.fields || [];
       step.singleSelect = !question.options?.allowMultiSelect;
       step.options = options.map(option => ({
-        value: option,
-        label: humanizeOptionLabel(option),
+        value: optionValue(option),
+        label: humanizeOptionLabel(optionLabel(option)),
       }));
     }
 
     if (type === "personal_info") {
       const fields = question.options?.fields || ["First Name", "Last Name", "Email Address", "Phone Number"];
-      step.fields = fields.map(label => ({
-        name: fieldNameFromLabel(label),
-        label,
-        type: fieldInputType(label),
-        required: question.isRequired !== false,
-      }));
+      step.fields = fields.map((field, fieldIndex) =>
+        personalInfoFieldToConfig(field, question.isRequired !== false, fieldIndex)
+      );
     }
 
     return step;
@@ -490,6 +488,28 @@ function uniqueId(base: string, usedIds: Set<string>): string {
   return candidate;
 }
 
+function personalInfoFieldToConfig(field: unknown, fallbackRequired: boolean, index: number): NonNullable<StepConfig["fields"]>[number] {
+  const record = isRecord(field) ? field : null;
+  const label = record
+    ? stringProperty(record, ["label", "title", "text", "name"]) || `Field ${index + 1}`
+    : plainText(field) || `Field ${index + 1}`;
+  const name = record
+    ? stringProperty(record, ["name", "id", "key"]) || fieldNameFromLabel(label)
+    : fieldNameFromLabel(label);
+  const required = record && typeof record.isRequired === "boolean"
+    ? record.isRequired
+    : record && typeof record.required === "boolean"
+      ? record.required
+      : fallbackRequired;
+
+  return {
+    name: toCamelCase(name, fieldNameFromLabel(label)),
+    label,
+    type: fieldInputType(`${name} ${label}`),
+    required,
+  };
+}
+
 function fieldNameFromLabel(label: string): string {
   const normalized = label.toLowerCase();
   if (normalized.includes("first")) return "firstName";
@@ -506,11 +526,37 @@ function fieldInputType(label: string): "text" | "email" | "tel" {
   return "text";
 }
 
+function optionValue(option: unknown): string {
+  if (isRecord(option)) {
+    return stringProperty(option, ["value", "id", "key", "name", "label", "title"]) || "option";
+  }
+  return plainText(option) || "option";
+}
+
+function optionLabel(option: unknown): string {
+  if (isRecord(option)) {
+    return stringProperty(option, ["label", "title", "text", "value", "name"]) || optionValue(option);
+  }
+  return plainText(option) || optionValue(option);
+}
+
 function humanizeOptionLabel(value: string): string {
   if (value === "I don't know yet.") return "I don't know";
   if (value === "Less then 50") return "Less than 50";
   if (value === "300 Plus") return "300+";
   return value;
+}
+
+function stringProperty(record: Record<string, unknown>, keys: string[]): string {
+  for (const key of keys) {
+    const value = plainText(record[key]);
+    if (value) return value;
+  }
+  return "";
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
 function printImportSummary(
